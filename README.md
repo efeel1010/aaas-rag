@@ -1,6 +1,6 @@
 # Pulse-Rag
 
-对外提供 RAG 服务的 API 应用，分为多阶段交付。本仓库为 **M1 骨架**。
+企业级 **RAG（检索增强生成）应用平台**，以 API / 分享链接对外提供智能体与工作流服务。面向知识库问答、科研检索与 Agent 自动化编排场景，采用 monorepo 多阶段交付。
 
 ## 技术栈
 
@@ -10,7 +10,47 @@
 - 数据访问：Drizzle ORM（pg-core）+ PostgreSQL 18 + pgvector
 - 缓存/队列：Redis（M1 阶段作为基础设施预留）
 - 共享契约：packages/contracts（Zod）
-- 前端：React 19 + Vite + Tailwind CSS v4（M1 阶段为最小占位）
+- 前端：React 19 + Vite + Tailwind CSS v4
+
+## 底层 AI 技术框架
+
+平台在模型接入、知识检索与 Agent 编排三个层面构建 AI 能力，全部基于开源自研与生态框架组合，避开厂商锁定：
+
+- **编排框架：LangChain / LangGraph**
+  - 基于 `@langchain/core` 的基元与 `@langchain/langgraph` 的状态图驱动 **可视化工作流 DAG** 编排（节点模板、条件分支、执行器、异步队列、并行执行）；
+  - 统一抽象 LLM / Embedding / Rerank 调用，见 `@langchain/openai` 与自研 provider 适配器。
+- **模型接入：多 Provider 适配层**
+  - 统一注册与管理 `chat`（对话/推理）、`embedding`（向量化）、`rerank`（重排）三类模型；
+  - 内置 **OpenAI 及 OpenAI-compatible**、**Anthropic Claude**、**阿里云百炼 DashScope（qwen 系列）** 等 Provider，支持自定义 `baseURL` 接入任意兼容端点；
+  - 支持 **主备模型降级容错**（主模型失败自动切换备用）、SSE 流式归一化。
+- **知识检索：pgvector 混合检索**
+  - 向量存储使用 PostgreSQL `pgvector`（`vector(1536)` + HNSW 索引），可与业务数据同库管理；
+  - 混合检索融合**稠密向量召回 + 关键词匹配**，经 **RRF（Reciprocal Rank Fusion）** 融合排序，再用 **reranker 二次重排**，提升科研长尾答案的命中精度；
+  - 支持文档解析（txt/md/pdf/docx/html/xlsx）、切分与向量化索引，非结构化协议由自研 `parser` 注入式实现。
+- **Agent 工具生态：自研工具循环**
+  - 采用 **ReAct 工具调用循环**（`tool-call-loop`）：LLM 决策 → 工具执行 → 结果回填；
+  - 内建工具包括 **知识库本地检索（local_retrieval）**、**OpenAlex 学术文献检索** 等，按注册表统一调度，可横向扩展。
+
+## 平台 AI 核心功能
+
+- **知识库 RAG**
+  - 多格式文档上传（txt / md / pdf / docx / html / xlsx / xls / csv）、文本解析、智能切分与向量化索引；
+  - 检索问答自动注入上下文，回答**携带引用溯源（citations）**，可追溯答案来自哪份文档切片。
+- **智能体（Agent）编排**
+  - 基于 ReAct 工具循环实现多轮推理与工具调用；
+  - **意图识别**：根据用户意图自动路由到对应知识库（「意图 → 知识库」白名单路由）；
+  - 多轮**对话记忆**与会话管理（会话落库、历史回读）。
+- **可视化工作流（LangGraph DAG）**
+  - 拖拽式搭建节点、条件分支与并行执行，将多步 AI 处理编排为可复用管线（模板 + 条件 + 执行器）。
+- **多模型管理**
+  - 统一管理 `chat` / `embedding` / `rerank` 三类模型，多 Provider 注册与**主备降级容错**；
+  - 每篇文档、每次提问可独立配置模型与检索参数（成功/失败对用户可见、可重置）。
+- **开放能力与分发**
+  - 智能体 / 工作流对外提供 **API**（独立 Token、权限绑定）与 **分享链接**；
+  - 支持 **SSE 流式输出**（meta / delta / usage / done / error 事件）。
+- **可观测与反馈**
+  - 全链路**调用日志 / Token 用量 / 耗时**记录，每次检索的命中片段对用户可视（引用溯源）；
+  - 消息**点赞/点踩**反馈，沉淀到检索与生成质量优化。
 
 ## 目录结构
 
