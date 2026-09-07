@@ -1,0 +1,43 @@
+# Pulse-Rag 本地基础设施：PostgreSQL(带 pgvector) + Redis
+name: pulse-rag
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: pulse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+      POSTGRES_DB: pulse
+    ports:
+      - '5432:5432'
+    volumes:
+      # PG18+ 官方/pgvector 镜像约定将数据置于 /var/lib/postgresql（版本化子目录），
+      # 直接挂 /var/lib/postgresql/data 会触发启动校验失败（见 docker-library/postgres#1259）。
+      - pulse_pgdata:/var/lib/postgresql
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pulse -d pulse']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: pulse-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - pulse_redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pulse_pgdata:
+  pulse_redisdata:

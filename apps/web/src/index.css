@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ *
+ * Pulse-Rag M6 视觉 tokens —— 深色 Dify 风格
+ * 主色 #7c5cff（项目固定 token），标题用 Georgia，左对齐布局
+ * ------------------------------------------------------------------ */
+@theme {
+  /* 背景 / 表面 / 边界 */
+  --color-canvas: #121216;
+  --color-surface: #1a1a1f;
+  --color-surface-2: #212128;
+  --color-surface-3: #2a2a33;
+  --color-surface-4: #34343f;
+  --color-line: #2d2d36;
+  --color-line-soft: #24242c;
+  --color-line-strong: #3a3a46;
+
+  /* 文字层级 */
+  --color-ink: #f2f2f4;
+  --color-ink-2: #a7a7b3;
+  --color-ink-3: #6f6f7a;
+
+  /* 品牌 / 语义色 */
+  --color-primary: #7c5cff;
+  --color-primary-strong: #8f74ff;
+  --color-primary-soft: rgba(124, 92, 255, 0.16);
+  --color-success: #34d399;
+  --color-success-soft: rgba(52, 211, 153, 0.14);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.14);
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.14);
+  --color-info: #60a5fa;
+  --color-info-soft: rgba(96, 165, 250, 0.14);
+
+  /* 字体 */
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ------------------------------------------------------------------ *
+ * 基础
+ * ------------------------------------------------------------------ */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 深色滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: rgba(124, 92, 255, 0.35);
+}
+
+/* 统一 focus 环 */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ *
+ * React Flow 深色主题覆盖
+ * ------------------------------------------------------------------ */
+.react-flow {
+  --xy-background-color: var(--color-canvas);
+  --xy-edge-stroke: #4b4b58;
+  --xy-edge-stroke-selected: var(--color-primary);
+  --xy-connectionline-stroke: var(--color-primary);
+  --xy-handle-background-color: var(--color-surface-3);
+  --xy-handle-border-color: var(--color-primary);
+  background-color: var(--color-canvas);
+}
+
+.react-flow__attribution {
+  background: transparent;
+  color: var(--color-ink-3);
+}
+
+.react-flow__controls {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-line);
+}
+.react-flow__controls button {
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-2);
+}
+.react-flow__controls button:hover {
+  background: var(--color-surface-3);
+  color: var(--color-ink);
+}
+.react-flow__controls button svg {
+  fill: currentColor;
+}
+
+.react-flow__minimap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.react-flow__edge-text {
+  fill: var(--color-ink-2);
+  font-size: 11px;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--color-primary);
+  stroke-width: 2;
+}
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: var(--color-primary);
+}
+.react-flow__edge-path {
+  stroke-width: 1.6;
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-primary);
+  background: var(--color-surface-3);
+}
+.react-flow__handle:hover {
+  background: var(--color-primary);
+}
+
+.react-flow__node.selected .pulse-node {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-soft), 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* 画布 mini 提示背景网格 */
+.react-flow__pane {
+  cursor: grab;
+}
+.react-flow__pane.dragging {
+  cursor: grabbing;
+}

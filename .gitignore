@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# builds
+dist
+build
+out
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# editor & os
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# logs & coverage
+*.log
+coverage
+
+# drizzle
+apps/api/node_modules/.cache

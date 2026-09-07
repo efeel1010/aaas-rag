@@ -1,0 +1,1 @@
+ALTER TABLE "agents" ADD COLUMN "tools" text[] DEFAULT '{}' NOT NULL;
