@@ -1,5 +1,7 @@
 # Pulse-Rag
 
+> 基于 **LangChain / LangGraph 与 pgvector** 的企业级 RAG 应用平台：融合多 Provider 模型管理、知识库问答与可视化工作流编排，以 API / 分享链接开放智能体服务。
+
 企业级 **RAG（检索增强生成）应用平台**，以 API / 分享链接对外提供智能体与工作流服务。面向知识库问答、科研检索与 Agent 自动化编排场景，采用 monorepo 多阶段交付。
 
 ## 技术栈
@@ -24,7 +26,7 @@
   - 内置 **OpenAI 及 OpenAI-compatible**、**Anthropic Claude**、**阿里云百炼 DashScope（qwen 系列）** 等 Provider，支持自定义 `baseURL` 接入任意兼容端点；
   - 支持 **主备模型降级容错**（主模型失败自动切换备用）、SSE 流式归一化。
 - **知识检索：pgvector 混合检索**
-  - 向量存储使用 PostgreSQL `pgvector`（`vector(1536)` + HNSW 索引），可与业务数据同库管理；
+  - 向量存储使用 PostgreSQL `pgvector`（`vector(1024)` + HNSW 索引），可与业务数据同库管理；
   - 混合检索融合**稠密向量召回 + 关键词匹配**，经 **RRF（Reciprocal Rank Fusion）** 融合排序，再用 **reranker 二次重排**，提升科研长尾答案的命中精度；
   - 支持文档解析（txt/md/pdf/docx/html/xlsx）、切分与向量化索引，非结构化协议由自研 `parser` 注入式实现。
 - **Agent 工具生态：自研工具循环**
@@ -148,7 +150,7 @@ pnpm dev
 ## 数据库 Schema（M1 共 15 张表）
 
 - `providers` / `models` —— 模型提供方与模型注册（llm / embedding / rerank）
-- `datasets` / `documents` / `dataset_chunks` —— RAG 知识库（`dataset_chunks.embedding` 为 `vector(1536)`）
+- `datasets` / `documents` / `dataset_chunks` —— RAG 知识库（`dataset_chunks.embedding` 为 `vector(1024)`）
 - `agents` / `agent_datasets` —— Agent 与其可检索知识库的白名单
 - `intents` / `agent_intents` —— 意图识别与「意图→知识库」路由
 - `workflows` / `workflow_nodes` / `workflow_edges` —— 工作流 DAG
@@ -159,7 +161,7 @@ pnpm dev
 
 ## 后续阶段需要注意的地基设定
 
-1. **pgvector 维度固定**：`dataset_chunks.embedding` 的维度在建列时即固定为 1536。更换 embedding 模型（维度不同）需重建向量列与索引，M1 特此预留 `datasets.embedding_model_id`，后续「按数据集选择 embedding 模型」需规划迁移策略。
+1. **pgvector 维度固定**：`dataset_chunks.embedding` 的维度在建列时即固定为 1024（2026-09-09 由 vector(1536) 迁移，适配 `qwen3.7-text-embedding-flash`）。更换 embedding 模型（维度不同）需重建向量列与索引，M1 特此预留 `datasets.embedding_model_id`，后续「按数据集选择 embedding 模型」需规划迁移策略。
 2. **鉴权尚未真正校验**：`middleware/auth.ts` 仅注入 `AuthContext` 占位；后续需将 `api_keys` 与鉴权、路由级 `authz` 打通。
 3. **密钥安全**：`providers.credentials` 与 `api_keys.key` 目前明文落库；后续需引入字段级加密 / 哈希。
 4. **统一响应只会影响 JSON 接口**：启用 SSE 上下文（`/api/v1/chat/chat-messages`）后，错误信封与流式输出需单独约定。

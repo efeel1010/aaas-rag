@@ -13,8 +13,8 @@ import { embed } from '../models/index.js';
 import { getRunnableModel } from '../../services/model-store.js';
 import { ConflictError } from './../errors.js';
 
-/** 向量列固定维度（与 schema DATASET_DIMENSIONS 对齐） */
-export const VECTOR_DIMENSIONS = 1536;
+/** 向量列固定维度（与 schema DATASET_DIMENSIONS 对齐；2026-09-09 迁移为 1024 适配 qwen3.7-text-embedding-flash） */
+export const VECTOR_DIMENSIONS = 1024;
 
 /** DashScope 等兼容端点单次 embedding 请求允许的最大批大小（超限返回 400） */
 const EMBED_BATCH_SIZE = 20;

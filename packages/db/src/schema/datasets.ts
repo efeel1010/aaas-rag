@@ -18,8 +18,9 @@ import { models } from './providers';
  * 默认 embedding 维度。
  * 后续可通过 provider/model 配置化的 embedding 模型覆盖该维度。
  * 注意：pgvector 的维度在创建列时即固定，若更换 embedding 模型需重建向量列。
+ * 2026-09-09：向量列迁移为 1024（qwen3.7-text-embedding-flash 仅支持 ≤1024 维）。
  */
-export const DEFAULT_EMBEDDING_DIMENSIONS = 1536;
+export const DEFAULT_EMBEDDING_DIMENSIONS = 1024;
 
 export const datasets = pgTable(
   'datasets',

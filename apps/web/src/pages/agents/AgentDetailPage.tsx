@@ -16,7 +16,7 @@ import { ConversationLog } from '../../components/ui/ConversationLog.js';
 import { FullPageLoader, Spinner } from '../../components/ui/Spinner.js';
 import { EmptyState } from '../../components/ui/EmptyState.js';
 import { useToast } from '../../components/ui/Toast.js';
-import { Textarea } from '../../components/ui/Input.js';
+import { Textarea, Input, Field } from '../../components/ui/Input.js';
 import { cn } from '../../lib/format.js';
 
 const STRATEGY_LABEL: Record<string, string> = {
@@ -50,6 +50,25 @@ interface ChatMessage {
   streaming?: boolean;
 }
 
+/** 对话生成参数（输入框以字符串承载，空值表示不传、走模型默认） */
+interface ChatParams {
+  temperature: string;
+  maxTokens: string;
+  topK: string;
+}
+
+/**
+ * 系统推荐的默认生成参数 —— 严格按照知识库契约取值：
+ *  - temperature：0~2 可选，默认不指定（由模型 provider 决定）；
+ *  - maxTokens：正整数可选，默认不指定（由模型 provider 决定）；
+ *  - topK：检索召回数 1~20，默认 6。
+ */
+const DEFAULT_CHAT_PARAMS: ChatParams = {
+  temperature: '',
+  maxTokens: '',
+  topK: '6',
+};
+
 let msgSeq = 0;
 const nextMsgId = () => ++msgSeq;
 
@@ -67,6 +86,7 @@ export function AgentDetailPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [chatParams, setChatParams] = useState<ChatParams>(DEFAULT_CHAT_PARAMS);
   const sessionIdRef = useRef<string | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
@@ -108,6 +128,26 @@ export function AgentDetailPage() {
       return;
     }
 
+    // 参数校验：严格按照契约范围，非法时拦截并提示
+    const temperature = chatParams.temperature.trim();
+    const maxTokens = chatParams.maxTokens.trim();
+    const topK = chatParams.topK.trim();
+    const temperatureNum = temperature === '' ? undefined : Number(temperature);
+    const maxTokensNum = maxTokens === '' ? undefined : Number(maxTokens);
+    const topKNum = topK === '' ? undefined : Number(topK);
+    if (temperature !== '' && (Number.isNaN(temperatureNum) || (temperatureNum as number) < 0 || (temperatureNum as number) > 2)) {
+      toast.error('temperature 须在 0~2 之间');
+      return;
+    }
+    if (maxTokens !== '' && (!Number.isInteger(maxTokensNum) || (maxTokensNum as number) <= 0)) {
+      toast.error('maxTokens 须为正整数');
+      return;
+    }
+    if (topK !== '' && (Number.isNaN(topKNum) || !Number.isInteger(topKNum) || (topKNum as number) < 1 || (topKNum as number) > 20)) {
+      toast.error('topK 须为 1~20 的整数');
+      return;
+    }
+
     const userMsg: ChatMessage = { id: nextMsgId(), role: 'user', content: query };
     const assistantMsg: ChatMessage = { id: nextMsgId(), role: 'assistant', content: '', streaming: true };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
@@ -119,6 +159,10 @@ export function AgentDetailPage() {
         query,
         sessionId: sessionIdRef.current,
         stream: true,
+        // 空值不传，由后端走模型默认（topK 后端默认 6）
+        temperature: temperatureNum,
+        maxTokens: maxTokensNum,
+        topK: topKNum,
       });
       const meta: ChatMeta = { intentName: null, retrievedDatasets: [], toolCalls: [], citations: [] };
       for await (const evt of events) {
@@ -280,6 +324,8 @@ export function AgentDetailPage() {
           onStop={stopStream}
           onClear={clearChat}
           chatBoxRef={chatBoxRef}
+          chatParams={chatParams}
+          setChatParams={setChatParams}
         />
       )}
       {tab === 'history' && <ConversationLog agentId={agent.id} />}
@@ -512,6 +558,8 @@ function ChatTab({
   onStop,
   onClear,
   chatBoxRef,
+  chatParams,
+  setChatParams,
 }: {
   agent: AgentView;
   messages: ChatMessage[];
@@ -522,7 +570,18 @@ function ChatTab({
   onStop: () => void;
   onClear: () => void;
   chatBoxRef: React.RefObject<HTMLDivElement | null>;
+  chatParams: ChatParams;
+  setChatParams: (v: ChatParams) => void;
 }) {
+  const toast = useToast();
+  const updateParam = (key: keyof ChatParams, value: string) =>
+    setChatParams({ ...chatParams, [key]: value });
+
+  const resetParams = () => {
+    setChatParams(DEFAULT_CHAT_PARAMS);
+    toast.success('已恢复系统推荐的默认参数');
+  };
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
       {/* 聊天区 */}
@@ -629,6 +688,59 @@ function ChatTab({
           </div>
           <p className="mt-1.5 text-[11px] text-ink-3">
             需先绑定 <b className="text-ink-2">llm 对话模型</b>与<b className="text-ink-2">知识库</b>；mock 模式下即可完成全链路。
+          </p>
+        </div>
+      </Card>
+
+      {/* 生成参数面板 */}
+      <Card padded={false} className="h-fit text-[13px]">
+        <div className="flex items-center justify-between border-b border-line-soft px-4 py-2.5">
+          <span className="text-xs font-semibold text-ink-3">生成参数</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={resetParams}
+            icon={<Icon name="refresh" size={13} />}
+            className="text-primary hover:text-primary-strong"
+          >
+            重置默认
+          </Button>
+        </div>
+        <div className="space-y-3.5 px-4 py-3.5">
+          <Field label="temperature" hint="采样温度，0~2；留空使用模型默认">
+            <Input
+              type="number"
+              min={0}
+              max={2}
+              step={0.1}
+              placeholder="默认（模型决定）"
+              value={chatParams.temperature}
+              onChange={(e) => updateParam('temperature', e.target.value)}
+            />
+          </Field>
+          <Field label="maxTokens" hint="最大生成长度（正整数）；留空使用模型默认">
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              placeholder="默认（模型决定）"
+              value={chatParams.maxTokens}
+              onChange={(e) => updateParam('maxTokens', e.target.value)}
+            />
+          </Field>
+          <Field label="topK" hint="检索召回数，1~20；默认 6">
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              step={1}
+              placeholder="默认 6"
+              value={chatParams.topK}
+              onChange={(e) => updateParam('topK', e.target.value)}
+            />
+          </Field>
+          <p className="rounded-lg bg-surface-2 p-2.5 text-[11px] leading-relaxed text-ink-3">
+            修改后即时生效，发送消息时自动携带；点击「重置默认」恢复系统推荐值（temperature / maxTokens 不指定、topK=6）。
           </p>
         </div>
       </Card>
