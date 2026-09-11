@@ -1,4 +1,4 @@
-# Pulse-Rag
+# Aaas-Rag
 
 > 基于 **LangChain / LangGraph 与 pgvector** 的企业级 RAG 应用平台：融合多 Provider 模型管理、知识库问答与可视化工作流编排，以 API / 分享链接开放智能体服务。
 
